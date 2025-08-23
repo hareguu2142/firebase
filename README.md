@@ -1,7 +1,7 @@
-# Gemini Proxy React App
+# Gemini Proxy React Playground
 
-Firebase Hosting에 배포할 수 있는 Vite + React 예제입니다.  
-백엔드는 사용자가 제공한 `geminiProxy`(Cloud Run Functions / Cloud Functions 2nd gen) 엔드포인트를 사용합니다.
+Firebase Hosting에 배포할 수 있는 Vite + React 기반의 Gemini API 플레이그라운드 예제입니다.
+백엔드는 사용자가 제공한 `geminiProxy`(Cloud Run 서비스 또는 Cloud Functions 2nd gen) 엔드포인트를 사용합니다.
 
 ## 1) 사전 준비
 - 백엔드 CORS 환경변수 `ALLOWED_ORIGINS`에 **호스팅 도메인**을 추가하세요.
@@ -19,11 +19,11 @@ VITE_GEMINI_PROXY_URL=https://<당신의-프록시-URL>
 
 ```bash
 cp .env.example .env.local
-# 그리고 URL을 채워넣으세요
+# 그리고 .env.local 파일에 URL을 채워넣으세요
 ```
 
-Firebase Hosting에서 **rewrite**를 구성하면 `/api/gemini`로도 접근할 수 있습니다.
-이 프로젝트는 환경변수를 우선 사용하며, 미설정 시 `/api/gemini` 경로를 시도합니다.
+Firebase Hosting에서 **rewrite**를 구성하면 환경변수 설정 없이 `/api/gemini` 경로로 백엔드에 접근할 수 있습니다.
+이 프로젝트는 환경변수를 우선 사용하며, 미설정 시 `/api/gemini` 경로를 사용합니다.
 
 ### (선택) Firebase Hosting rewrite 예시
 `firebase.json` 내 `hosting.rewrites`에 아래 중 하나를 추가하세요.
@@ -32,7 +32,7 @@ Firebase Hosting에서 **rewrite**를 구성하면 `/api/gemini`로도 접근할
 ```json
 {
   "source": "/api/gemini",
-  "run": { "serviceId": "gemini-proxy", "region": "asia-northeast3" }
+  "run": { "serviceId": "geminiproxy", "region": "asia-northeast3" }
 }
 ```
 
@@ -44,40 +44,48 @@ Firebase Hosting에서 **rewrite**를 구성하면 `/api/gemini`로도 접근할
 }
 ```
 
-> 실제 `serviceId` / `functionId` / `region`은 프로젝트에 맞게 변경하세요.
+> 실제 `serviceId` / `functionId` / `region`은 당신의 GCP 프로젝트에 맞게 변경하세요.
 
-## 3) 실행
+## 3) 주요 기능
+- Gemini 모델과 대화할 수 있는 채팅 인터페이스
+- 스트리밍 및 일반(non-streaming) 응답 모드 지원
+- 모델, 시스템 프롬프트, Temperature, topP, topK 등 다양한 생성 옵션 설정 가능
+- 대화 기록이 브라우저의 Local Storage에 자동으로 저장되어 새로고침해도 유지됩니다.
+
+## 4) 로컬 실행
 ```bash
 npm i
 npm run dev
 # http://localhost:5173
 ```
 
-## 4) 프로덕션 빌드
+## 5) 프로덕션 빌드
 ```bash
 npm run build
 npm run preview
 ```
 
-생성된 정적 파일은 `dist/`에 위치합니다.
+생성된 정적 파일은 `dist/` 디렉토리에 위치합니다.
 
-## 5) Firebase Hosting 배포
+## 6) Firebase Hosting 배포
 ```bash
+# Firebase CLI 설치 및 로그인 후
 firebase init hosting
-# - 'existing project' 선택
-# - 'public directory'로 dist 입력
-# - SPA routing(Y/N)은 자유롭게
+# - 'Use an existing project' 선택
+# - 'What do you want to use as your public directory?'에 'dist' 입력
+# - 'Configure as a single-page app (rewrite all urls to /index.html)?'는 자유롭게 선택
+# - 'Set up automatic builds and deploys with GitHub?'는 자유롭게 선택
 # 필요시 rewrites 설정 추가
 
 npm run build
 firebase deploy --only hosting
 ```
 
-## 6) 스트리밍 주의사항
-- 백엔드가 **POST + text/event-stream**을 사용하므로, 브라우저에서는 `EventSource` 대신 `fetch`의 ReadableStream으로 처리합니다.
-- 현재 서버 구현상 스트리밍 요청에서는 `history`가 사용되지 않습니다. (단발 프롬프트만 전송)
+## 7) 스트리밍 주의사항
+- 백엔드가 **POST + text/event-stream**을 사용하므로, 브라우저에서는 `EventSource` API 대신 `fetch`의 ReadableStream으로 응답을 처리합니다.
+- 현재 서버 구현상 스트리밍 요청에서는 이전 대화(`history`)가 전송되지 않습니다. (단발성 프롬프트만 전송)
 
-## 7) 문제해결
-- CORS 오류: 백엔드 `ALLOWED_ORIGINS`에 현재 호스트가 포함되어 있는지 확인
-- 405/404: 프록시 URL 또는 Hosting rewrite 경로 확인
-- 500: 백엔드 로그에서 에러 메시지를 확인 (`console.error` 존재)
+## 8) 문제해결
+- **CORS 오류**: 백엔드 `ALLOWED_ORIGINS` 환경변수에 현재 접속한 호스트(예: `http://localhost:5173`)가 포함되어 있는지 확인하세요.
+- **405/404 오류**: `VITE_GEMINI_PROXY_URL` 환경변수 또는 Firebase Hosting의 rewrite 경로가 올바른지 확인하세요.
+- **500 오류**: 백엔드 로그에서 에러 메시지를 확인하세요.
